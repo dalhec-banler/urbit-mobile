@@ -1,0 +1,29 @@
+# Keys and secrets
+*.key
+*.keyfile
+
+# Built binaries
+*.elf
+urbit
+urbit-patched
+
+# Pill files (176MB+, downloadable)
+*.pill
+
+# Zig build artifacts
+zig-out/
+zig-cache/
+.zig-cache/
+
+# Pier data
+*-pier/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
