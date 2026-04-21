@@ -1,0 +1,67 @@
+# vere.te — SELinux type enforcement for Urbit vere daemon
+#
+# Defines the vere domain with minimum required permissions:
+#   - Network (UDP for Ames, TCP for Eyre HTTP)
+#   - File I/O (pier at /data/vere/)
+#   - Memory (16GB mmap loom, mprotect demand paging)
+#   - Process (SIGSEGV handler for demand paging)
+
+# Domain and type declarations
+type vere, domain;
+type vere_exec, exec_type, file_type, system_file_type;
+type vere_data_file, file_type, data_file_type;
+type vere_prop, property_type;
+
+# Domain transition: init executes vere_exec → enters vere domain
+init_daemon_domain(vere)
+
+# --- Network ---
+net_domain(vere)
+
+# UDP sockets (Ames protocol, port 34543)
+allow vere self:udp_socket { create connect bind read write getopt setopt };
+allow vere port_type:udp_socket name_bind;
+allow vere node_type:udp_socket node_bind;
+
+# TCP sockets (Eyre HTTP server, port 8080)
+allow vere self:tcp_socket { create connect bind listen accept read write getopt setopt shutdown };
+allow vere port_type:tcp_socket { name_bind name_connect };
+allow vere node_type:tcp_socket node_bind;
+
+# Netlink for routing info
+allow vere self:netlink_route_socket { create bind read write nlmsg_read };
+
+# --- Memory (critical for 64-bit loom) ---
+# execmem: vere uses mprotect to toggle page permissions for demand paging
+# (SIGSEGV handler catches writes to read-only pages, marks dirty, mprotects to RW)
+allow vere self:process execmem;
+allow vere self:process { signal sigchld };
+
+# --- Filesystem ---
+# Read/write pier data at /data/vere/
+allow vere vere_data_file:dir create_dir_perms;
+allow vere vere_data_file:file create_file_perms;
+allow vere vere_data_file:lnk_file read_lnk_file_perms;
+
+# --- /proc access ---
+r_dir_file(vere, proc)
+r_dir_file(vere, proc_net)
+allow vere proc_meminfo:file read;
+
+# --- Device access ---
+allow vere urandom_device:chr_file r_file_perms;
+allow vere null_device:chr_file rw_file_perms;
+allow vere devpts:chr_file rw_file_perms;
+
+# --- Properties ---
+get_prop(vere, system_prop)
+get_prop(vere, device_config_runtime_native_boot_prop)
+set_prop(vere, vere_prop)
+get_prop(vere, vere_prop)
+
+# --- Logging ---
+allow vere logd:unix_dgram_socket sendto;
+
+# --- Shutdown ---
+# Allow init to signal vere for graceful shutdown
+allow init vere:process { signal sigkill };

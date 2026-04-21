@@ -1,0 +1,2 @@
+# property_contexts — SELinux labels for vere system properties
+persist.vere.    u:object_r:vere_prop:s0

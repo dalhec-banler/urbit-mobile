@@ -1,0 +1,4 @@
+# file_contexts — SELinux labels for vere files
+/system/bin/vere                  u:object_r:vere_exec:s0
+/system/bin/vere-wrapper\.sh      u:object_r:vere_exec:s0
+/data/vere(/.*)?                  u:object_r:vere_data_file:s0

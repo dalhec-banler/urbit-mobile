@@ -27,3 +27,15 @@ zig-cache/
 
 # Logs
 *.log
+
+# Phase 2: Magisk module binary (23MB, built separately)
+aosp/magisk-module/common/urbit
+
+# Phase 2: avbroot signing keys
+keys/
+
+# Phase 2: built module zip
+urbit-vere-module.zip
+
+# Phase 2: pier backups
+pier-backup/

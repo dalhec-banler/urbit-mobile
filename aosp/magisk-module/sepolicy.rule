@@ -1,0 +1,17 @@
+# Urbit vere SELinux policy patches (magiskpolicy format)
+#
+# Vere runs as root in the magisk domain (started from service.sh),
+# which is already permissive. These rules are included for when we
+# transition to a dedicated vere domain in the full AOSP overlay.
+#
+# For now, the magisk domain has all required permissions:
+#   - Network (UDP/TCP sockets, DNS resolution)
+#   - File I/O (/data/vere/ pier read/write)
+#   - Memory (mmap 16GB loom, mprotect for demand paging)
+#   - Process (SIGSEGV handler, fork, signal)
+#
+# If you need to add rules for edge cases, each line is a magiskpolicy
+# statement. Examples:
+#
+#   allow magisk tmpfs file { read write create }
+#   allow magisk proc_net file { read open }

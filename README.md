@@ -2,9 +2,19 @@
 
 Sovereign Urbit-native phone OS. Ship runs as user-space process on Android hardware, with the 64-bit loom as the primary filesystem.
 
-## Status: Phase 1 Complete
+## Status: Phase 2 In Progress
 
-Validated that vere (msl/64 branch, 64-bit loom + demand paging) runs on a Pixel 8 Pro with GrapheneOS.
+Phase 1 validated that vere (msl/64 branch, 64-bit loom + demand paging) runs on a Pixel 8 Pro with GrapheneOS. Phase 2 makes it a proper system service.
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| 1 | Done | vere runs on Pixel 8 Pro via adb shell |
+| 2A | Ready | Magisk module: auto-start, OOM protection, crash recovery |
+| 2B | Scaffolded | Full AOSP fork: custom ROM with vere as init daemon |
+| 3 | Planned | Custom Urbit launcher + system UI |
+| 4 | Planned | Urbit apps as native Android apps |
+
+See [aosp/README.md](aosp/README.md) for Phase 2 deployment guide.
 
 ### What works
 
@@ -137,6 +147,19 @@ adb shell cat /data/local/tmp/vere-monitor.log
 - **drum decrement-underflow**: `%coup event failed` on every boot with drum.hoon stack trace. Breaks lens agent (500 errors). Ship still functions.
 - **Monitor killed by Doze**: Shell scripts get killed after ~1.5 hours of screen-off. The vere process itself survives because Ames keeps active UDP sockets.
 - **Pill can't download on-device**: vere's curl can't fetch the pill during first boot. Download on host and push via adb.
+
+## Phase 2: System Service
+
+Phase 2 makes vere a proper system service that auto-starts on boot. Two paths:
+
+**Path A (Magisk module)**: Patch existing GrapheneOS with Magisk root, deploy vere as a module. Ready to use now. See [aosp/README.md](aosp/README.md).
+
+**Path B (AOSP fork)**: Build a custom ROM from source with vere as a native init daemon, custom launcher, Urbit branding. The long-term product vision.
+
+```bash
+# Quick start (Path A)
+./aosp/scripts/bootstrap.sh    # check prerequisites + print full guide
+```
 
 ## Upstream
 
