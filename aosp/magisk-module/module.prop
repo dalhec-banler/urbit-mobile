@@ -1,0 +1,6 @@
+id=urbit-vere
+name=Urbit Vere Service
+version=v1.0.0
+versionCode=1
+author=dalhec-banler
+description=Runs Urbit vere as a system service with auto-start, OOM protection, and graceful shutdown.

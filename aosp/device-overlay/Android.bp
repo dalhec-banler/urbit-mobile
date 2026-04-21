@@ -1,0 +1,21 @@
+// Android.bp — Soong build rules for vere
+//
+// The vere binary is a prebuilt aarch64 ELF (cross-compiled via zig).
+// Place the binary at prebuilt/arm64/vere before building.
+
+cc_prebuilt_binary {
+    name: "vere",
+    stem: "urbit",
+    srcs: ["prebuilt/arm64/vere"],
+    strip: {
+        none: true,
+    },
+    init_rc: ["vere.rc"],
+}
+
+// Wrapper script installed alongside the binary
+sh_binary {
+    name: "vere-wrapper",
+    src: "vere-wrapper.sh",
+    filename: "vere-wrapper.sh",
+}
