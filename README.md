@@ -2,31 +2,34 @@
 
 Sovereign Urbit-native phone OS. Ship runs as user-space process on Android hardware, with the 64-bit loom as the primary filesystem.
 
-## Status: Phase 2 In Progress
+## Status: Phase 2A Deployed
 
-Phase 1 validated that vere (msl/64 branch, 64-bit loom + demand paging) runs on a Pixel 8 Pro with GrapheneOS. Phase 2 makes it a proper system service.
+Phase 1 validated that vere (msl/64 branch, 64-bit loom + demand paging) runs on a Pixel 8 Pro with GrapheneOS. Phase 2A deployed it as a system service via Magisk module — vere auto-starts on boot with OOM protection and crash recovery.
 
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 1 | Done | vere runs on Pixel 8 Pro via adb shell |
-| 2A | Ready | Magisk module: auto-start, OOM protection, crash recovery |
+| 2A | **Deployed** | Magisk module: auto-start, OOM protection, crash recovery |
 | 2B | Scaffolded | Full AOSP fork: custom ROM with vere as init daemon |
 | 3 | Planned | Custom Urbit launcher + system UI |
 | 4 | Planned | Urbit apps as native Android apps |
 
-See [aosp/README.md](aosp/README.md) for Phase 2 deployment guide.
+See [aosp/README.md](aosp/README.md) for the full deployment guide.
 
 ### What works
 
+- **Auto-start**: Ship starts on boot via Magisk service, no manual intervention
 - **Boot**: Moon boots from pill, completes OTA kernel compilation
 - **Ames**: All 56 galaxies resolve, DMs send and receive
-- **HTTP**: Landscape UI serves on localhost:8080, Tlon app functional
+- **HTTP**: Landscape UI serves on localhost:80, Tlon app functional
 - **Memory**: 16GB virtual loom maps successfully, demand-pages to ~106MB RSS at idle (from 1.3GB peak during boot)
-- **Survival**: Ship survives phone disconnect, Doze mode, screen-off
+- **Survival**: Ship survives phone disconnect, Doze mode, screen-off, reboots
+- **Crash recovery**: Monitor process checks every 5 min, auto-restarts vere on crash
+- **OOM protection**: oom_score_adj -900 prevents Android from killing vere
 
 ### Hardware
 
-- Pixel 8 Pro (husky), GrapheneOS
+- Pixel 8 Pro (husky), GrapheneOS + Magisk (via avbroot)
 - 12GB RAM, Tensor G3
 - USB + wireless ADB
 
@@ -34,10 +37,12 @@ See [aosp/README.md](aosp/README.md) for Phase 2 deployment guide.
 
 ```
 ┌─────────────────────────────────────┐
-│         GrapheneOS (Android)        │
+│    GrapheneOS + Magisk (Android)    │
 │                                     │
 │  ┌─────────────────────────────┐    │
 │  │     vere (aarch64-musl)     │    │
+│  │     auto-start on boot      │    │
+│  │     OOM protected (-900)    │    │
 │  │                             │    │
 │  │  ┌───────────────────────┐  │    │
 │  │  │   64-bit loom (16GB)  │  │    │
@@ -46,11 +51,65 @@ See [aosp/README.md](aosp/README.md) for Phase 2 deployment guide.
 │  │  └───────────────────────┘  │    │
 │  │                             │    │
 │  │  Ames ── UDP :34543         │    │
-│  │  Eyre ── HTTP :8080         │    │
+│  │  Eyre ── HTTP :80           │    │
+│  └─────────────────────────────┘    │
+│                                     │
+│  ┌─────────────────────────────┐    │
+│  │  Monitor (every 5 min)      │    │
+│  │  crash restart, DNS refresh │    │
+│  │  battery + RSS logging      │    │
 │  └─────────────────────────────┘    │
 │                                     │
 └─────────────────────────────────────┘
 ```
+
+## Quick Start (Phase 2A — Magisk Module)
+
+Requires: macOS, adb, [avbroot](https://github.com/chenxiaolong/avbroot/releases), a Pixel 8 Pro with GrapheneOS.
+
+```bash
+# 1. Check prerequisites
+./aosp/scripts/bootstrap.sh
+
+# 2. Generate signing keys (one-time)
+./aosp/avbroot/setup-keys.sh keys
+
+# 3. Download GrapheneOS OTA + factory image + Magisk APK
+#    OTA + factory: https://grapheneos.org/releases (husky)
+#    Magisk:        https://github.com/topjohnwu/Magisk/releases
+
+# 4. Patch OTA with Magisk
+./aosp/avbroot/patch-ota.sh <ota.zip> <Magisk.apk>
+
+# 5. Extract patched images for fastboot
+avbroot ota extract --input <ota-magisk.zip> --directory extracted --fastboot
+
+# 6. Flash stock GrapheneOS factory image (WIPES DEVICE)
+#    Backup pier first: ./aosp/scripts/backup-pier.sh pier-backup
+unzip husky-install-*.zip && cd husky-install-*/ && ./flash-all.sh
+
+# 7. Flash patched Magisk images on top
+adb reboot bootloader
+ANDROID_PRODUCT_OUT=extracted fastboot flashall --skip-reboot
+fastboot erase avb_custom_key
+fastboot flash avb_custom_key keys/avb_pkmd.bin
+fastboot reboot
+
+# 8. Set up Magisk (open app, let it finish, reboot)
+
+# 9. Build and install vere module
+cp /path/to/urbit-patched aosp/magisk-module/common/urbit
+./aosp/scripts/build-module.sh
+adb push urbit-vere-module.zip /sdcard/Download/
+# Magisk app → Modules → Install from storage
+
+# 10. Restore pier + reboot
+./aosp/scripts/restore-pier.sh pier-backup
+adb reboot
+# Ship starts automatically
+```
+
+See [aosp/README.md](aosp/README.md) for the detailed step-by-step with troubleshooting.
 
 ## Build
 
@@ -82,7 +141,7 @@ python3 scripts/patch-dns.py vere/zig-out/aarch64-linux-musl/urbit
 
 Output: 23MB statically-linked ELF aarch64 binary.
 
-### Deploy to phone
+### Deploy to phone (Phase 1 — manual)
 
 ```bash
 # Push binary, keyfile, and pill to phone
@@ -92,7 +151,7 @@ Output: 23MB statically-linked ELF aarch64 binary.
     path/to/urbit-v4.3.pill
 ```
 
-### Boot
+### Boot (Phase 1 — manual)
 
 ```bash
 # First boot (new moon)
@@ -119,7 +178,7 @@ adb shell '/data/local/tmp/urbit --no-dock --no-conn -t -p 34543 /data/local/tmp
 
 ### DNS setup
 
-Before running vere, write DNS config on the phone:
+Before running vere (Phase 1 only — Phase 2 handles this automatically):
 
 ```bash
 adb shell "echo 'nameserver 192.168.2.254
@@ -131,12 +190,14 @@ Adjust nameservers for your network. WiFi required (cellular IPv6/NAT64 doesn't 
 ## Monitor
 
 ```bash
-# Push and start the battery/process monitor
+# Phase 2: check auto-started logs
+adb shell "su -c 'tail -20 /data/vere/urbit.log'"
+adb shell "su -c 'cat /data/vere/monitor.log'"
+
+# Phase 1: push and start the battery/process monitor manually
 adb push scripts/monitor.sh /data/local/tmp/monitor.sh
 adb shell "chmod +x /data/local/tmp/monitor.sh"
 adb shell "nohup /data/local/tmp/monitor.sh </dev/null >/dev/null 2>&1 &"
-
-# Read logs later
 adb shell cat /data/local/tmp/vere-monitor.log
 ```
 
@@ -145,16 +206,17 @@ adb shell cat /data/local/tmp/vere-monitor.log
 - **`shm_open` fails**: No /dev/shm on Android. Cosmetic, doesn't affect operation.
 - **`http.c: failed to open spin stack`**: Related to shm. Cosmetic.
 - **drum decrement-underflow**: `%coup event failed` on every boot with drum.hoon stack trace. Breaks lens agent (500 errors). Ship still functions.
-- **Monitor killed by Doze**: Shell scripts get killed after ~1.5 hours of screen-off. The vere process itself survives because Ames keeps active UDP sockets.
+- **Monitor killed by Doze (Phase 1 only)**: Shell scripts get killed after ~1.5 hours of screen-off. Phase 2 Magisk service survives because it runs as a boot service.
 - **Pill can't download on-device**: vere's curl can't fetch the pill during first boot. Download on host and push via adb.
+- **"Your device is corrupt" warning**: Expected with custom AVB keys. Select "boot anyway." Does not affect functionality.
 
 ## Phase 2: System Service
 
 Phase 2 makes vere a proper system service that auto-starts on boot. Two paths:
 
-**Path A (Magisk module)**: Patch existing GrapheneOS with Magisk root, deploy vere as a module. Ready to use now. See [aosp/README.md](aosp/README.md).
+**Path A (Magisk module)** — Deployed and tested. Patch existing GrapheneOS with Magisk via avbroot, deploy vere as a module. See [aosp/README.md](aosp/README.md).
 
-**Path B (AOSP fork)**: Build a custom ROM from source with vere as a native init daemon, custom launcher, Urbit branding. The long-term product vision.
+**Path B (AOSP fork)** — The long-term product vision. Build a custom ROM from source with vere as a native init daemon, custom Urbit launcher, Urbit branding, Urbit apps as system apps. Device overlay scaffolded at `aosp/device-overlay/`.
 
 ```bash
 # Quick start (Path A)
@@ -166,6 +228,7 @@ Phase 2 makes vere a proper system service that auto-starts on boot. Two paths:
 - Vere source: [urbit/vere](https://github.com/urbit/vere), branch `msl/64`
 - Zig 0.15.2 required (0.16.0 has breaking build.zig.zon changes)
 - macOS 26 (Tahoe) breaks zig 0.15.2's linker, hence the Docker build container
+- avbroot: [chenxiaolong/avbroot](https://github.com/chenxiaolong/avbroot) (download binary, not on crates.io)
 
 ## License
 
