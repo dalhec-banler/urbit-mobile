@@ -10,6 +10,10 @@ import android.net.NetworkRequest
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import io.nativeplanet.urbit.launcher.data.dataStore
+import io.nativeplanet.urbit.launcher.widget.UrbitWidget
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -363,6 +367,18 @@ class UrbitService : Service() {
             _unreadCount.value
         )
         NotificationHelper.notify(this, NotificationHelper.SERVICE_NOTIFICATION_ID, notification)
+        persistStateAndUpdateWidget()
+    }
+
+    private fun persistStateAndUpdateWidget() {
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[stringPreferencesKey("ship_name")] = _shipName.value ?: "~"
+                prefs[stringPreferencesKey("is_connected")] = (_connectionState.value == ConnectionState.CONNECTED).toString()
+                prefs[stringPreferencesKey("unread_count")] = _unreadCount.value.toString()
+            }
+            UrbitWidget.notifyUpdate(this@UrbitService)
+        }
     }
 
     private fun registerNetworkCallback() {
