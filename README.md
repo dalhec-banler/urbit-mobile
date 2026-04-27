@@ -220,18 +220,34 @@ nameserver 8.8.8.8' > /tmp/resolv.conf"
 
 Adjust nameservers for your network. WiFi required (cellular IPv6/NAT64 doesn't work for shell-started native binaries).
 
-## Monitor
+## Scripts
+
+Utility scripts for managing urbit-mobile. All require ADB with port forwarding set up (`adb forward tcp:12321 tcp:12321`).
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/status.sh` | Full system status report |
+| `scripts/health.sh` | Quick health check |
+| `scripts/lens.sh` | Reliable lens API client (auto-cancels stuck jobs) |
+| `scripts/deploy-binary.sh` | Deploy new vere binary to phone |
+| `scripts/build.sh` | Cross-compile vere for aarch64-musl |
 
 ```bash
-# Phase 2: check auto-started logs
+# Full status report
+./scripts/status.sh
+
+# Quick health check
+./scripts/health.sh
+
+# Send dojo command via lens (handles stuck jobs)
+./scripts/lens.sh "(add 1 1)"
+
+# Deploy new binary
+./scripts/deploy-binary.sh /path/to/urbit
+
+# Check logs
 adb shell "su -c 'tail -20 /data/vere/urbit.log'"
 adb shell "su -c 'cat /data/vere/monitor.log'"
-
-# Phase 1: push and start the battery/process monitor manually
-adb push scripts/monitor.sh /data/local/tmp/monitor.sh
-adb shell "chmod +x /data/local/tmp/monitor.sh"
-adb shell "nohup /data/local/tmp/monitor.sh </dev/null >/dev/null 2>&1 &"
-adb shell cat /data/local/tmp/vere-monitor.log
 ```
 
 ## Known issues
