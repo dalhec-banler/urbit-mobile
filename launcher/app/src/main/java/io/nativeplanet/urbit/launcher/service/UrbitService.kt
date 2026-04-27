@@ -18,6 +18,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -283,40 +284,60 @@ class UrbitService : Service() {
     }
 
     private fun handleNotification(note: JSONObject) {
-        try {
-            val bin = note.optJSONObject("bin") ?: return
-            val place = bin.optJSONObject("place") ?: return
-            val desk = place.optString("desk", "")
-            val body = note.optJSONObject("body") ?: return
+        scope.launch {
+            try {
+                val prefs = dataStore.data.first()
+                val bgEnabled = prefs[stringPreferencesKey("settings_bg_notifications")]?.toBoolean() ?: true
+                if (!bgEnabled) return@launch
 
-            val title = when (desk) {
-                "groups" -> "Groups"
-                "talk" -> "Talk"
-                else -> desk.replaceFirstChar { it.uppercase() }
+                val bin = note.optJSONObject("bin") ?: return@launch
+                val place = bin.optJSONObject("place") ?: return@launch
+                val desk = place.optString("desk", "")
+                val body = note.optJSONObject("body") ?: return@launch
+
+                val title = when (desk) {
+                    "groups" -> "Groups"
+                    "talk" -> "Talk"
+                    else -> desk.replaceFirstChar { it.uppercase() }
+                }
+
+                val content = body.optString("content", "New notification")
+
+                val isMention = content.contains("mentioned")
+                val isDM = desk == "talk"
+
+                val notifyMentions = prefs[stringPreferencesKey("settings_notify_mentions")]?.toBoolean() ?: true
+                val notifyDMs = prefs[stringPreferencesKey("settings_notify_dms")]?.toBoolean() ?: true
+                val notifyOther = prefs[stringPreferencesKey("settings_notify_other")]?.toBoolean() ?: true
+
+                val shouldNotify = when {
+                    isMention -> notifyMentions
+                    isDM -> notifyDMs
+                    else -> notifyOther
+                }
+                if (!shouldNotify) return@launch
+
+                val channelId = when {
+                    isMention -> NotificationHelper.MENTION_CHANNEL_ID
+                    isDM -> NotificationHelper.DM_CHANNEL_ID
+                    else -> NotificationHelper.HARK_CHANNEL_ID
+                }
+
+                val (notifId, notification) = NotificationHelper.createHarkNotification(
+                    this@UrbitService,
+                    title,
+                    content,
+                    channelId,
+                    desk = desk,
+                    notificationId = NotificationHelper.HARK_NOTIFICATION_BASE_ID + (System.currentTimeMillis() % 1000).toInt()
+                )
+
+                NotificationHelper.notifyWithSummary(this@UrbitService, notifId, notification)
+                _unreadCount.value++
+                updateNotification()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to handle notification", e)
             }
-
-            val content = body.optString("content", "New notification")
-
-            val channelId = when {
-                content.contains("mentioned") -> NotificationHelper.MENTION_CHANNEL_ID
-                desk == "talk" -> NotificationHelper.DM_CHANNEL_ID
-                else -> NotificationHelper.HARK_CHANNEL_ID
-            }
-
-            val (notifId, notification) = NotificationHelper.createHarkNotification(
-                this,
-                title,
-                content,
-                channelId,
-                desk = desk,
-                notificationId = NotificationHelper.HARK_NOTIFICATION_BASE_ID + (System.currentTimeMillis() % 1000).toInt()
-            )
-
-            NotificationHelper.notifyWithSummary(this, notifId, notification)
-            _unreadCount.value++
-            updateNotification()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to handle notification", e)
         }
     }
 
