@@ -40,9 +40,16 @@ class LauncherViewModel : ViewModel() {
             serviceBound = true
 
             viewModelScope.launch {
-                urbitService?.connectionState?.collect { state ->
+                urbitService?.connectionState?.collect { serviceState ->
+                    val status = when (serviceState) {
+                        UrbitService.ConnectionState.CONNECTED -> ConnectionStatus.CONNECTED
+                        UrbitService.ConnectionState.CONNECTING -> ConnectionStatus.CONNECTING
+                        UrbitService.ConnectionState.RECONNECTING -> ConnectionStatus.RECONNECTING
+                        else -> ConnectionStatus.DISCONNECTED
+                    }
                     _state.update { it.copy(
-                        isConnected = state == UrbitService.ConnectionState.CONNECTED
+                        isConnected = serviceState == UrbitService.ConnectionState.CONNECTED,
+                        connectionStatus = status
                     )}
                 }
             }

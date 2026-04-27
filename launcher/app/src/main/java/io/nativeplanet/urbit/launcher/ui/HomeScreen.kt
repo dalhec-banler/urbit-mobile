@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import io.nativeplanet.urbit.launcher.data.AgentInfo
+import io.nativeplanet.urbit.launcher.data.ConnectionStatus
 import io.nativeplanet.urbit.launcher.theme.LauncherTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -63,6 +64,7 @@ import kotlin.math.roundToInt
 fun VesselHome(
     shipName: String?,
     agents: List<AgentInfo>,
+    connectionStatus: ConnectionStatus = ConnectionStatus.CONNECTED,
     onAgentTap: (String) -> Unit,
     onReorderAgents: (List<AgentInfo>) -> Unit = {},
     onSwipeUp: () -> Unit = {},
@@ -116,12 +118,27 @@ fun VesselHome(
 
         Spacer(Modifier.height(2.dp))
 
-        // Day + greeting
-        Text(
-            text = "$dayName · $greeting",
-            style = typo.mono.copy(fontSize = 10.sp),
-            color = tokens.ink.copy(alpha = 0.55f),
-        )
+        // Day + greeting + connection status
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Connection indicator dot
+            val indicatorColor = when (connectionStatus) {
+                ConnectionStatus.CONNECTED -> Color(0xFF4CAF50) // Green
+                ConnectionStatus.CONNECTING, ConnectionStatus.RECONNECTING -> Color(0xFFFFA726) // Orange
+                ConnectionStatus.DISCONNECTED -> Color(0xFFEF5350) // Red
+            }
+            Canvas(modifier = Modifier.size(6.dp)) {
+                drawCircle(color = indicatorColor)
+            }
+
+            Text(
+                text = "$dayName · $greeting",
+                style = typo.mono.copy(fontSize = 10.sp),
+                color = tokens.ink.copy(alpha = 0.55f),
+            )
+        }
 
         Spacer(Modifier.height(14.dp))
 
@@ -362,6 +379,7 @@ private fun SecondaryChip(
 fun VesselQuiet(
     shipName: String?,
     agents: List<AgentInfo>,
+    connectionStatus: ConnectionStatus = ConnectionStatus.CONNECTED,
     onAgentTap: (String) -> Unit,
     onSwipeUp: () -> Unit = {},
     onSettingsTap: () -> Unit = {},
@@ -386,15 +404,28 @@ fun VesselQuiet(
                 }
             }
     ) {
-        // Date label
-        Text(
-            text = dateLine,
-            style = typo.mono.copy(
-                fontSize = 10.sp,
-                letterSpacing = 1.4.sp,
-            ),
-            color = tokens.ink.copy(alpha = 0.55f),
-        )
+        // Date label with connection indicator
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val indicatorColor = when (connectionStatus) {
+                ConnectionStatus.CONNECTED -> Color(0xFF4CAF50)
+                ConnectionStatus.CONNECTING, ConnectionStatus.RECONNECTING -> Color(0xFFFFA726)
+                ConnectionStatus.DISCONNECTED -> Color(0xFFEF5350)
+            }
+            Canvas(modifier = Modifier.size(6.dp)) {
+                drawCircle(color = indicatorColor)
+            }
+            Text(
+                text = dateLine,
+                style = typo.mono.copy(
+                    fontSize = 10.sp,
+                    letterSpacing = 1.4.sp,
+                ),
+                color = tokens.ink.copy(alpha = 0.55f),
+            )
+        }
 
         Spacer(Modifier.height(8.dp))
 

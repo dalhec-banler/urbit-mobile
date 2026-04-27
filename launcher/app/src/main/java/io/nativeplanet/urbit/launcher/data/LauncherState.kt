@@ -41,6 +41,13 @@ enum class HomeStyle {
     Tiles, Quiet
 }
 
+enum class ConnectionStatus {
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED,
+    RECONNECTING
+}
+
 data class LauncherState(
     val surface: Surface = Surface.Lock,
     val overlay: Overlay = Overlay.None,
@@ -49,6 +56,7 @@ data class LauncherState(
     val shipName: String? = null,
     val shipCode: String? = null,
     val isConnected: Boolean = false,
+    val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
     val agents: List<AgentInfo> = defaultAgents,
     val essentials: List<GuestEssential> = defaultEssentials,
     val guests: List<GuestApp> = defaultGuests,
