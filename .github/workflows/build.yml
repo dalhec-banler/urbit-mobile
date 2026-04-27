@@ -28,6 +28,15 @@ jobs:
         run: |
           git clone -b ${{ env.VERE_BRANCH }} --depth 1 https://github.com/urbit/vere.git
 
+      - name: Apply patches
+        run: |
+          for patch in patches/*.patch; do
+            if [ -f "$patch" ]; then
+              echo "Applying: $patch"
+              (cd vere && git apply "../$patch")
+            fi
+          done
+
       - name: Build vere
         run: |
           cd vere
