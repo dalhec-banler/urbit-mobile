@@ -102,8 +102,8 @@ echo ""
 
 # Battery
 echo "9. Device Status"
-BATT=$(adb shell "dumpsys battery" 2>/dev/null | grep "level:" | awk '{print $2}')
-TEMP=$(adb shell "dumpsys battery" 2>/dev/null | grep "temperature:" | awk '{print $2}')
+BATT=$(adb shell "dumpsys battery" 2>/dev/null | grep "^  level:" | awk '{print $2}' | tr -d '\r')
+TEMP=$(adb shell "dumpsys battery" 2>/dev/null | grep "^  temperature:" | awk '{print $2}' | tr -d '\r')
 TEMP_C=$((TEMP / 10))
 echo "   Battery: ${BATT}%"
 echo "   Temperature: ${TEMP_C}°C"
