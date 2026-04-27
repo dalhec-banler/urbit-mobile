@@ -197,6 +197,7 @@ fun LauncherShell(vm: LauncherViewModel) {
                                 HomeStyle.Tiles -> VesselHome(
                                     shipName = state.shipName,
                                     agents = state.agents,
+                                    connectionStatus = state.connectionStatus,
                                     onAgentTap = handleAgentTap,
                                     onReorderAgents = { vm.reorderAgents(it) },
                                     onSwipeUp = { vm.navigateTo(Surface.Drawer) },
@@ -208,6 +209,7 @@ fun LauncherShell(vm: LauncherViewModel) {
                                 HomeStyle.Quiet -> VesselQuiet(
                                     shipName = state.shipName,
                                     agents = state.agents,
+                                    connectionStatus = state.connectionStatus,
                                     onAgentTap = handleAgentTap,
                                     onSwipeUp = { vm.navigateTo(Surface.Drawer) },
                                     onSettingsTap = { vm.showOverlay(Overlay.Quick) },
