@@ -308,11 +308,11 @@ class UrbitService : Service() {
                 title,
                 content,
                 channelId,
-                groupKey = desk,
+                desk = desk,
                 notificationId = NotificationHelper.HARK_NOTIFICATION_BASE_ID + (System.currentTimeMillis() % 1000).toInt()
             )
 
-            NotificationHelper.notify(this, notifId, notification)
+            NotificationHelper.notifyWithSummary(this, notifId, notification)
             _unreadCount.value++
             updateNotification()
         } catch (e: Exception) {
