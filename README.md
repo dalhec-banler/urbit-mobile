@@ -236,9 +236,9 @@ adb shell cat /data/local/tmp/vere-monitor.log
 
 ## Known issues
 
-- **`shm_open` fails**: No /dev/shm on Android. Cosmetic, doesn't affect operation.
-- **`http.c: failed to open spin stack`**: Related to shm. Cosmetic.
-- **drum decrement-underflow**: `%coup event failed` on every boot with drum.hoon stack trace. Breaks lens agent (500 errors). Ship still functions.
+- ~~**`shm_open` fails**~~ **FIXED**: Patch 0001 checks for /dev/shm before calling shm_open.
+- ~~**`http.c: failed to open spin stack`**~~ **FIXED**: Same patch removes the noisy error message.
+- **Lens 500 errors after stuck job**: Lens agent is single-threaded. If a command fails mid-stream or client disconnects, the job stays stuck and all subsequent requests return 500. Workaround: send `{"source":{"cancel":null},"sink":{"stdout":null}}` to clear.
 - **Monitor killed by Doze (Phase 1 only)**: Shell scripts get killed after ~1.5 hours of screen-off. Phase 2 Magisk service survives because it runs as a boot service.
 - **Pill can't download on-device**: vere's curl can't fetch the pill during first boot. Download on host and push via adb.
 - **"Your device is corrupt" warning**: Expected with custom AVB keys. Select "boot anyway." Does not affect functionality.
