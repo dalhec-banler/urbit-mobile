@@ -113,19 +113,52 @@ See [aosp/README.md](aosp/README.md) for the detailed step-by-step with troubles
 
 ## Build
 
-### Prerequisites
+[![Build](https://github.com/dalhec-banler/urbit-mobile/actions/workflows/build.yml/badge.svg)](https://github.com/dalhec-banler/urbit-mobile/actions/workflows/build.yml)
 
-- macOS with Apple Silicon (or any Linux aarch64 host)
-- [Colima](https://github.com/abiosoft/colima) + Docker
-- ADB (`brew install android-platform-tools`)
+### Download pre-built binaries
 
-### Cross-compile vere
+Every commit to `main` or `develop` produces artifacts via GitHub Actions:
+- **urbit-aarch64-linux-musl** — patched vere binary ready for Android
+- **urbit-vere-module.zip** — Magisk module with binary included
+
+Download from [Actions](https://github.com/dalhec-banler/urbit-mobile/actions) or [Releases](https://github.com/dalhec-banler/urbit-mobile/releases).
+
+### Build locally
+
+#### Linux x86_64 (recommended)
+
+Zig cross-compiles natively — no Docker or emulation needed.
+
+```bash
+# 1. Download Zig 0.15.2
+curl -LO https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+tar -xf zig-x86_64-linux-0.15.2.tar.xz
+export PATH="$PWD/zig-x86_64-linux-0.15.2:$PATH"
+
+# 2. Clone vere source (msl/64 branch)
+git clone -b msl/64 https://github.com/urbit/vere.git
+
+# 3. Build
+cd vere
+zig build -Dtarget=aarch64-linux-musl -Doptimize=ReleaseFast
+cd ..
+
+# 4. Patch DNS for Android (musl hardcodes /etc/resolv.conf which doesn't exist)
+python3 scripts/patch-dns.py vere/zig-out/aarch64-linux-musl/urbit
+
+# 5. (Optional) Strip debug symbols
+llvm-strip vere/zig-out/aarch64-linux-musl/urbit-patched
+```
+
+#### macOS (Apple Silicon)
+
+Use Docker via Colima to run Zig in an aarch64 container:
 
 ```bash
 # 1. Start Colima (aarch64 VM for Docker)
 colima start --arch aarch64 --cpu 4 --memory 8
 
-# 2. Download zig 0.15.2 for Linux and build the Docker image
+# 2. Download zig 0.15.2 for Linux aarch64 and build the Docker image
 curl -LO https://ziglang.org/download/0.15.2/zig-aarch64-linux-0.15.2.tar.xz
 docker build -t vere-builder .
 
@@ -135,11 +168,11 @@ git clone -b msl/64 https://github.com/urbit/vere.git
 # 4. Build
 ./scripts/build.sh ./vere
 
-# 5. Patch DNS for Android (musl hardcodes /etc/resolv.conf which doesn't exist)
+# 5. Patch DNS for Android
 python3 scripts/patch-dns.py vere/zig-out/aarch64-linux-musl/urbit
 ```
 
-Output: 23MB statically-linked ELF aarch64 binary.
+Output: ~23MB statically-linked ELF aarch64 binary.
 
 ### Deploy to phone (Phase 1 — manual)
 
