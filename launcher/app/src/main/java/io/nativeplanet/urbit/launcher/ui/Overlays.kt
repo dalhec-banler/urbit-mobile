@@ -176,6 +176,7 @@ fun QuickSettings(
     shipName: String?,
     currentAesthetic: Aesthetic,
     onAestheticChange: (Aesthetic) -> Unit,
+    onSettingsTap: () -> Unit = {},
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -238,6 +239,25 @@ fun QuickSettings(
                 current = currentAesthetic,
                 onSelect = onAestheticChange
             )
+
+            Spacer(Modifier.height(20.dp))
+
+            // Settings button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(tokens.radius.dp))
+                    .background(tokens.tile)
+                    .clickable { onSettingsTap(); onDismiss() }
+                    .padding(14.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "settings",
+                    style = typo.mono.copy(fontSize = 12.sp),
+                    color = tokens.ink,
+                )
+            }
 
             Spacer(Modifier.weight(1f))
 

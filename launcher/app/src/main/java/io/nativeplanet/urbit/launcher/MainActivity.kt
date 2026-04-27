@@ -149,6 +149,7 @@ fun LauncherShell(vm: LauncherViewModel) {
             state.surface == Surface.Drawer -> vm.navigateTo(Surface.Home)
             state.surface == Surface.GuestApp -> vm.navigateTo(Surface.Home)
             state.surface == Surface.Tasks -> vm.navigateTo(Surface.Home)
+            state.surface == Surface.Settings -> vm.navigateTo(Surface.Home)
         }
     }
 
@@ -272,6 +273,17 @@ fun LauncherShell(vm: LauncherViewModel) {
                         surface == Surface.Tasks -> {
                             Box(modifier = Modifier.fillMaxSize())
                         }
+
+                        surface == Surface.Settings -> {
+                            SettingsScreen(
+                                settings = state.serviceSettings,
+                                onSettingsChange = { vm.updateSettings(it) },
+                                onDisconnect = {
+                                    vm.disconnect(context)
+                                },
+                                onBack = { vm.navigateTo(Surface.Home) }
+                            )
+                        }
                     }
                 }
             }
@@ -289,6 +301,7 @@ fun LauncherShell(vm: LauncherViewModel) {
                 shipName = state.shipName,
                 currentAesthetic = state.aesthetic,
                 onAestheticChange = { vm.setAesthetic(it); vm.savePreferences(context) },
+                onSettingsTap = { vm.navigateTo(Surface.Settings) },
                 onDismiss = { vm.dismissOverlay() }
             )
             Overlay.Command -> CommandBar(
