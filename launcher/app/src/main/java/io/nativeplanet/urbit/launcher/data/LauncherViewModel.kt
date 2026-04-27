@@ -1,7 +1,10 @@
 package io.nativeplanet.urbit.launcher.data
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -9,6 +12,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.nativeplanet.urbit.launcher.service.UrbitService
 import io.nativeplanet.urbit.launcher.theme.Aesthetic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +29,62 @@ class LauncherViewModel : ViewModel() {
     val state: StateFlow<LauncherState> = _state.asStateFlow()
 
     val connection = UrbitConnection()
+
+    private var urbitService: UrbitService? = null
+    private var serviceBound = false
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            val localBinder = binder as? UrbitService.LocalBinder
+            urbitService = localBinder?.service
+            serviceBound = true
+
+            viewModelScope.launch {
+                urbitService?.connectionState?.collect { state ->
+                    _state.update { it.copy(
+                        isConnected = state == UrbitService.ConnectionState.CONNECTED
+                    )}
+                }
+            }
+
+            viewModelScope.launch {
+                urbitService?.shipName?.collect { name ->
+                    _state.update { it.copy(shipName = name) }
+                }
+            }
+
+            viewModelScope.launch {
+                urbitService?.unreadCount?.collect { count ->
+                    _state.update { it.copy(
+                        agents = it.agents.map { agent ->
+                            if (agent.desk == "groups") agent.copy(liveCount = count)
+                            else agent
+                        }
+                    )}
+                }
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            urbitService = null
+            serviceBound = false
+        }
+    }
+
+    fun bindService(context: Context) {
+        if (!serviceBound) {
+            val intent = Intent(context, UrbitService::class.java)
+            context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    fun unbindService(context: Context) {
+        if (serviceBound) {
+            context.unbindService(serviceConnection)
+            serviceBound = false
+            urbitService = null
+        }
+    }
 
     fun loadPreferences(context: Context) {
         viewModelScope.launch {
@@ -86,17 +146,24 @@ class LauncherViewModel : ViewModel() {
 
     /**
      * Auto-connect to the ship using saved +code.
-     * Authenticates directly via Eyre — no lens API needed.
+     * Starts the background service and authenticates via Eyre.
      */
     private fun autoConnect(context: Context) {
         viewModelScope.launch {
             val savedCode = _state.value.shipCode
             if (savedCode != null) {
+                // Start the background service
+                UrbitService.start(context)
+                bindService(context)
+
                 val authed = connection.authenticate(savedCode)
                 if (authed) {
                     val name = connection.getShipName()
                     _state.update { it.copy(isConnected = true, shipName = name) }
                     loadShipAgents()
+
+                    // Connect the service too
+                    urbitService?.connect(savedCode)
                     return@launch
                 }
             }
@@ -146,7 +213,7 @@ class LauncherViewModel : ViewModel() {
         }
     }
 
-    fun connectToShip(code: String) {
+    fun connectToShip(code: String, context: Context? = null) {
         viewModelScope.launch {
             _state.update { it.copy(shipCode = code) }
             val authed = connection.authenticate(code)
@@ -154,6 +221,13 @@ class LauncherViewModel : ViewModel() {
                 val name = connection.getShipName()
                 _state.update { it.copy(isConnected = true, shipName = name) }
                 loadShipAgents()
+
+                // Start and connect to the background service
+                context?.let { ctx ->
+                    UrbitService.start(ctx)
+                    bindService(ctx)
+                    urbitService?.connect(code)
+                }
             } else {
                 _state.update { it.copy(isConnected = false) }
             }

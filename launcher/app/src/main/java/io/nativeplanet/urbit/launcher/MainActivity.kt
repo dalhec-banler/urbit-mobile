@@ -1,11 +1,15 @@
 package io.nativeplanet.urbit.launcher
 
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -16,6 +20,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -23,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.nativeplanet.urbit.launcher.data.HomeStyle
@@ -30,13 +36,25 @@ import io.nativeplanet.urbit.launcher.data.LauncherViewModel
 import io.nativeplanet.urbit.launcher.data.Overlay
 import io.nativeplanet.urbit.launcher.data.Surface
 import io.nativeplanet.urbit.launcher.guest.GuestLauncher
+import io.nativeplanet.urbit.launcher.service.NotificationHelper
 import io.nativeplanet.urbit.launcher.theme.LauncherTheme
 import io.nativeplanet.urbit.launcher.theme.tokensByAesthetic
 import io.nativeplanet.urbit.launcher.ui.*
 
 class MainActivity : ComponentActivity() {
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* Permission result handled silently */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Create notification channels early
+        NotificationHelper.createChannels(this)
+
+        // Request notification permission on Android 13+
+        requestNotificationPermission()
 
         // Show over the system lock screen and auto-dismiss keyguard
         setShowWhenLocked(true)
@@ -53,6 +71,14 @@ class MainActivity : ComponentActivity() {
             val vm: LauncherViewModel = viewModel()
             val state by vm.state.collectAsState()
             val context = LocalContext.current
+
+            // Bind to service when composable enters, unbind when it leaves
+            DisposableEffect(Unit) {
+                vm.bindService(context)
+                onDispose {
+                    vm.unbindService(context)
+                }
+            }
 
             LaunchedEffect(Unit) {
                 vm.loadPreferences(context)
@@ -73,6 +99,15 @@ class MainActivity : ComponentActivity() {
 
             LauncherTheme(aesthetic = state.aesthetic) {
                 LauncherShell(vm)
+            }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
@@ -124,7 +159,7 @@ fun LauncherShell(vm: LauncherViewModel) {
                         !state.isConnected -> {
                             SetupScreen(
                                 onConnect = { code ->
-                                    vm.connectToShip(code)
+                                    vm.connectToShip(code, context)
                                     vm.savePreferences(context)
                                 },
                                 onAutoConnect = {
