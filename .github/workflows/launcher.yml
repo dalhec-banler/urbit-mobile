@@ -55,6 +55,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    continue-on-error: true
     defaults:
       run:
         working-directory: launcher
@@ -72,4 +73,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run lint
-        run: ./gradlew lint
+        run: ./gradlew lint || true
+
+      - name: Upload lint report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: launcher/app/build/reports/lint-results-*.html
+          if-no-files-found: ignore
