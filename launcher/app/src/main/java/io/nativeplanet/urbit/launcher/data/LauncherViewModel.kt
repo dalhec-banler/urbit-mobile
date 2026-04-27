@@ -100,6 +100,12 @@ class LauncherViewModel : ViewModel() {
             val homeStyleName = prefs[stringPreferencesKey("home_style")]
             val savedCode = prefs[stringPreferencesKey("ship_code")]
 
+            val bgNotifs = prefs[stringPreferencesKey("settings_bg_notifications")]?.toBoolean() ?: true
+            val notifyDMs = prefs[stringPreferencesKey("settings_notify_dms")]?.toBoolean() ?: true
+            val notifyMentions = prefs[stringPreferencesKey("settings_notify_mentions")]?.toBoolean() ?: true
+            val notifyOther = prefs[stringPreferencesKey("settings_notify_other")]?.toBoolean() ?: true
+            val autoStart = prefs[stringPreferencesKey("settings_auto_start")]?.toBoolean() ?: true
+
             _state.update { s ->
                 s.copy(
                     aesthetic = aestheticName?.let {
@@ -108,7 +114,14 @@ class LauncherViewModel : ViewModel() {
                     homeStyle = homeStyleName?.let {
                         try { HomeStyle.valueOf(it) } catch (_: Exception) { null }
                     } ?: s.homeStyle,
-                    shipCode = savedCode
+                    shipCode = savedCode,
+                    serviceSettings = ServiceSettings(
+                        backgroundNotificationsEnabled = bgNotifs,
+                        notifyDMs = notifyDMs,
+                        notifyMentions = notifyMentions,
+                        notifyOther = notifyOther,
+                        autoStartOnBoot = autoStart
+                    )
                 )
             }
 
@@ -288,8 +301,17 @@ class LauncherViewModel : ViewModel() {
         _state.update { it.copy(surface = Surface.Lock, overlay = Overlay.None) }
     }
 
-    fun updateSettings(settings: ServiceSettings) {
+    fun updateSettings(settings: ServiceSettings, context: Context) {
         _state.update { it.copy(serviceSettings = settings) }
+        viewModelScope.launch {
+            context.dataStore.edit { prefs ->
+                prefs[stringPreferencesKey("settings_bg_notifications")] = settings.backgroundNotificationsEnabled.toString()
+                prefs[stringPreferencesKey("settings_notify_dms")] = settings.notifyDMs.toString()
+                prefs[stringPreferencesKey("settings_notify_mentions")] = settings.notifyMentions.toString()
+                prefs[stringPreferencesKey("settings_notify_other")] = settings.notifyOther.toString()
+                prefs[stringPreferencesKey("settings_auto_start")] = settings.autoStartOnBoot.toString()
+            }
+        }
     }
 
     fun disconnect(context: Context) {

@@ -277,7 +277,7 @@ fun LauncherShell(vm: LauncherViewModel) {
                         surface == Surface.Settings -> {
                             SettingsScreen(
                                 settings = state.serviceSettings,
-                                onSettingsChange = { vm.updateSettings(it) },
+                                onSettingsChange = { vm.updateSettings(it, context) },
                                 onDisconnect = {
                                     vm.disconnect(context)
                                 },

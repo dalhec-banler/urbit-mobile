@@ -18,8 +18,9 @@ class BootReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             val prefs = context.dataStore.data.first()
             val savedCode = prefs[stringPreferencesKey("ship_code")]
+            val autoStart = prefs[stringPreferencesKey("settings_auto_start")]?.toBoolean() ?: true
 
-            if (savedCode != null) {
+            if (savedCode != null && autoStart) {
                 UrbitService.start(context)
             }
         }
