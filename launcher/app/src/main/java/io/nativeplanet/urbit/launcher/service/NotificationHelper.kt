@@ -116,6 +116,15 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val markReadIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_MARK_READ
+            putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        val markReadPendingIntent = PendingIntent.getBroadcast(
+            context, notificationId + 10000, markReadIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_urbit)
             .setContentTitle(title)
@@ -123,6 +132,7 @@ object NotificationHelper {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setGroup(GROUP_KEY_URBIT)
+            .addAction(0, "Mark as Read", markReadPendingIntent)
             .build()
 
         activeNotifications[notificationId] = "$title: $body"
@@ -136,6 +146,14 @@ object NotificationHelper {
         }
         val pendingIntent = PendingIntent.getActivity(
             context, GROUP_SUMMARY_ID, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val clearAllIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_CLEAR_ALL
+        }
+        val clearAllPendingIntent = PendingIntent.getBroadcast(
+            context, GROUP_SUMMARY_ID + 10000, clearAllIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -158,6 +176,7 @@ object NotificationHelper {
             .setGroup(GROUP_KEY_URBIT)
             .setGroupSummary(true)
             .setStyle(inboxStyle)
+            .addAction(0, "Clear All", clearAllPendingIntent)
             .build()
     }
 
