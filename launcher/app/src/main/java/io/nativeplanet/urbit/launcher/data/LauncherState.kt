@@ -30,8 +30,16 @@ data class GuestApp(
 )
 
 enum class Surface {
-    Lock, Home, Drawer, Agent, Tasks, GuestApp
+    Lock, Home, Drawer, Agent, Tasks, GuestApp, Settings
 }
+
+data class ServiceSettings(
+    val backgroundNotificationsEnabled: Boolean = true,
+    val notifyDMs: Boolean = true,
+    val notifyMentions: Boolean = true,
+    val notifyOther: Boolean = true,
+    val autoStartOnBoot: Boolean = true
+)
 
 enum class Overlay {
     None, Notifications, Quick, Command, Share, Intent, Channel
@@ -62,6 +70,7 @@ data class LauncherState(
     val guests: List<GuestApp> = defaultGuests,
     val selectedAgent: String? = null,
     val selectedGuest: String? = null,
+    val serviceSettings: ServiceSettings = ServiceSettings(),
 )
 
 // Agents are populated dynamically from the ship's docket — see LauncherViewModel.loadShipAgents()

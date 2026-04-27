@@ -287,4 +287,23 @@ class LauncherViewModel : ViewModel() {
     fun lock() {
         _state.update { it.copy(surface = Surface.Lock, overlay = Overlay.None) }
     }
+
+    fun updateSettings(settings: ServiceSettings) {
+        _state.update { it.copy(serviceSettings = settings) }
+    }
+
+    fun disconnect(context: Context) {
+        viewModelScope.launch {
+            context.dataStore.edit { prefs ->
+                prefs.remove(stringPreferencesKey("ship_code"))
+            }
+            UrbitService.stop(context)
+            _state.update { it.copy(
+                isConnected = false,
+                shipName = null,
+                shipCode = null,
+                surface = Surface.Lock
+            )}
+        }
+    }
 }
