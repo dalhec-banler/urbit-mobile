@@ -269,6 +269,13 @@ class LauncherViewModel : ViewModel() {
         _state.update { it.copy(selectedAgent = agentId, surface = Surface.Agent) }
     }
 
+    fun selectAgentByDesk(desk: String) {
+        val agent = _state.value.agents.find { it.desk == desk }
+        if (agent != null) {
+            selectAgent(agent.id)
+        }
+    }
+
     fun selectGuest(guestId: String) {
         _state.update { it.copy(selectedGuest = guestId, surface = Surface.GuestApp) }
     }

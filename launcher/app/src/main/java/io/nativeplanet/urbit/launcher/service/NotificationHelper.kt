@@ -19,6 +19,10 @@ object NotificationHelper {
 
     const val SERVICE_NOTIFICATION_ID = 1
     const val HARK_NOTIFICATION_BASE_ID = 1000
+    const val GROUP_SUMMARY_ID = 999
+
+    private const val GROUP_KEY_URBIT = "io.nativeplanet.urbit.NOTIFICATIONS"
+    private val activeNotifications = mutableMapOf<Int, String>()
 
     fun createChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -98,11 +102,14 @@ object NotificationHelper {
         title: String,
         body: String,
         channelId: String = HARK_CHANNEL_ID,
-        groupKey: String? = null,
+        desk: String? = null,
         notificationId: Int = HARK_NOTIFICATION_BASE_ID
     ): Pair<Int, Notification> {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            if (desk != null) {
+                putExtra(MainActivity.EXTRA_OPEN_DESK, desk)
+            }
         }
         val pendingIntent = PendingIntent.getActivity(
             context, notificationId, intent,
@@ -115,14 +122,69 @@ object NotificationHelper {
             .setContentText(body)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
-            .apply {
-                if (groupKey != null) {
-                    setGroup(groupKey)
-                }
-            }
+            .setGroup(GROUP_KEY_URBIT)
             .build()
 
+        activeNotifications[notificationId] = "$title: $body"
         return notificationId to notification
+    }
+
+    fun createGroupSummary(context: Context): Notification {
+        val count = activeNotifications.size
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, GROUP_SUMMARY_ID, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val inboxStyle = NotificationCompat.InboxStyle()
+            .setBigContentTitle("$count new notifications")
+
+        activeNotifications.values.takeLast(5).forEach { line ->
+            inboxStyle.addLine(line)
+        }
+        if (count > 5) {
+            inboxStyle.setSummaryText("+${count - 5} more")
+        }
+
+        return NotificationCompat.Builder(context, HARK_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_urbit)
+            .setContentTitle("Urbit")
+            .setContentText("$count new notifications")
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setGroup(GROUP_KEY_URBIT)
+            .setGroupSummary(true)
+            .setStyle(inboxStyle)
+            .build()
+    }
+
+    fun notifyWithSummary(context: Context, id: Int, notification: Notification) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.notify(id, notification)
+        if (activeNotifications.size > 1) {
+            manager.notify(GROUP_SUMMARY_ID, createGroupSummary(context))
+        }
+    }
+
+    fun clearNotification(context: Context, id: Int) {
+        activeNotifications.remove(id)
+        cancel(context, id)
+        if (activeNotifications.isEmpty()) {
+            cancel(context, GROUP_SUMMARY_ID)
+        } else if (activeNotifications.size == 1) {
+            cancel(context, GROUP_SUMMARY_ID)
+        }
+    }
+
+    fun clearAllNotifications(context: Context) {
+        activeNotifications.keys.toList().forEach { id ->
+            cancel(context, id)
+        }
+        activeNotifications.clear()
+        cancel(context, GROUP_SUMMARY_ID)
     }
 
     fun notify(context: Context, id: Int, notification: Notification) {

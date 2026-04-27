@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleDeepLink(intent)
 
         // Create notification channels early
         NotificationHelper.createChannels(this)
@@ -82,6 +83,10 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 vm.loadPreferences(context)
+                MainActivity.pendingDeepLinkDesk?.let { desk ->
+                    MainActivity.pendingDeepLinkDesk = null
+                    vm.selectAgentByDesk(desk)
+                }
             }
 
             LaunchedEffect(state.aesthetic, state.homeStyle) {
@@ -110,6 +115,23 @@ class MainActivity : ComponentActivity() {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleDeepLink(intent)
+    }
+
+    private fun handleDeepLink(intent: android.content.Intent?) {
+        val desk = intent?.getStringExtra(EXTRA_OPEN_DESK)
+        if (desk != null) {
+            pendingDeepLinkDesk = desk
+        }
+    }
+
+    companion object {
+        const val EXTRA_OPEN_DESK = "open_desk"
+        var pendingDeepLinkDesk: String? = null
     }
 }
 
