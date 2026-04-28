@@ -13,13 +13,13 @@ cc_prebuilt_binary {
     },
     init_rc: ["vere.rc"],
     owner: "urbit",
-    vendor: false,
-    system_ext_specific: false,
+    system_ext_specific: true,  // install to /system_ext/bin
 }
 
-// Wrapper script installed to /system/bin
+// Wrapper script installed to /system_ext/bin
 sh_binary {
     name: "vere-wrapper",
     src: "vere-wrapper.sh",
     filename: "vere-wrapper.sh",
+    system_ext_specific: true,
 }
