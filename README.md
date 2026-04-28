@@ -272,6 +272,17 @@ Phase 2 makes vere a proper system service that auto-starts on boot. Two paths:
 ./aosp/scripts/bootstrap.sh    # check prerequisites + print full guide
 ```
 
+For the full AOSP build walkthrough (Path B), see [docs/AOSP_BUILD.md](docs/AOSP_BUILD.md).
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [aosp/README.md](aosp/README.md) | Phase 2 deployment guide (Magisk + AOSP) |
+| [docs/AOSP_BUILD.md](docs/AOSP_BUILD.md) | Detailed AOSP build walkthrough |
+| [../README.md](../README.md) | Project overview |
+| [../grove-mobile/README.md](../grove-mobile/README.md) | Grove Android app |
+
 ## Upstream
 
 - Vere source: [urbit/vere](https://github.com/urbit/vere), branch `msl/64`
