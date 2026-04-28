@@ -160,7 +160,7 @@ object NotificationHelper {
         val inboxStyle = NotificationCompat.InboxStyle()
             .setBigContentTitle("$count new notifications")
 
-        activeNotifications.values.takeLast(5).forEach { line ->
+        activeNotifications.values.toList().takeLast(5).forEach { line: String ->
             inboxStyle.addLine(line)
         }
         if (count > 5) {
