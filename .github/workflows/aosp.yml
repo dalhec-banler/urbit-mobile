@@ -1,0 +1,174 @@
+name: Build AOSP
+
+on:
+  workflow_dispatch:
+    inputs:
+      android_version:
+        description: 'AOSP tag (e.g., android-15.0.0_r29)'
+        required: true
+        default: 'android-15.0.0_r29'
+      build_variant:
+        description: 'Build variant'
+        required: true
+        default: 'userdebug'
+        type: choice
+        options:
+          - userdebug
+          - user
+          - eng
+
+env:
+  DEVICE: husky
+  PRODUCT: vere_husky
+
+jobs:
+  build-aosp:
+    name: Build AOSP ROM
+    runs-on: self-hosted  # Requires self-hosted runner with 300GB+ disk, 32GB+ RAM
+    timeout-minutes: 480   # 8 hours max
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check system requirements
+        run: |
+          echo "=== System Info ==="
+          free -h
+          df -h
+          nproc
+
+          # Check minimum requirements
+          RAM_GB=$(free -g | awk '/^Mem:/{print $2}')
+          DISK_GB=$(df -BG . | tail -1 | awk '{print $4}' | tr -d 'G')
+
+          if [ "$RAM_GB" -lt 32 ]; then
+            echo "::warning::Only ${RAM_GB}GB RAM available. 32GB minimum, 64GB recommended."
+          fi
+
+          if [ "$DISK_GB" -lt 200 ]; then
+            echo "::error::Only ${DISK_GB}GB disk available. Need 300GB+."
+            exit 1
+          fi
+
+      - name: Download vere binary
+        uses: actions/download-artifact@v4
+        with:
+          name: urbit-aarch64-linux-musl
+          path: ./aosp/device-overlay/prebuilt/arm64/
+        continue-on-error: true
+
+      - name: Check/download vere binary
+        run: |
+          BINARY="aosp/device-overlay/prebuilt/arm64/urbit"
+          if [ -f "aosp/device-overlay/prebuilt/arm64/urbit-patched" ]; then
+            mv aosp/device-overlay/prebuilt/arm64/urbit-patched "$BINARY"
+          fi
+
+          if [ ! -f "$BINARY" ]; then
+            echo "Downloading latest vere binary from CI..."
+            # Try to get from latest successful build
+            gh run download --name urbit-aarch64-linux-musl --dir aosp/device-overlay/prebuilt/arm64/ || {
+              echo "::error::No vere binary found. Run the Build workflow first."
+              exit 1
+            }
+            mv aosp/device-overlay/prebuilt/arm64/urbit-patched "$BINARY"
+          fi
+
+          chmod +x "$BINARY"
+          ls -la "$BINARY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Install repo tool
+        run: |
+          if ! command -v repo &>/dev/null; then
+            mkdir -p ~/bin
+            curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+            chmod a+x ~/bin/repo
+            echo "$HOME/bin" >> $GITHUB_PATH
+          fi
+
+      - name: Sync AOSP source
+        run: |
+          AOSP_DIR="${AOSP_ROOT:-$HOME/aosp}"
+          mkdir -p "$AOSP_DIR"
+          cd "$AOSP_DIR"
+
+          if [ ! -d ".repo" ]; then
+            echo "Initializing repo..."
+            repo init -u https://android.googlesource.com/platform/manifest \
+              -b ${{ inputs.android_version }} \
+              --depth=1
+          fi
+
+          echo "Syncing AOSP source..."
+          repo sync -c -j$(nproc) --no-tags --optimized-fetch --force-sync
+
+      - name: Extract vendor blobs
+        run: |
+          AOSP_DIR="${AOSP_ROOT:-$HOME/aosp}"
+          cd "$AOSP_DIR"
+
+          if [ ! -d "vendor/google_devices/${{ env.DEVICE }}" ]; then
+            echo "Extracting vendor blobs..."
+
+            if [ ! -d "android-prepare-vendor" ]; then
+              git clone https://github.com/anestisb/android-prepare-vendor
+            fi
+
+            # Get build ID from Android version tag
+            BUILD_ID=$(echo "${{ inputs.android_version }}" | sed 's/android-//' | cut -d'_' -f1)
+
+            ./android-prepare-vendor/execute-all.sh \
+              -d ${{ env.DEVICE }} \
+              -b "$BUILD_ID" \
+              -o vendor-out || echo "::warning::Vendor extraction may have issues"
+
+            cp -r vendor-out/${{ env.DEVICE }}/*/vendor* . || true
+          fi
+
+      - name: Install device overlay
+        run: |
+          AOSP_DIR="${AOSP_ROOT:-$HOME/aosp}"
+          mkdir -p "$AOSP_DIR/device/urbit/vere"
+          cp -r aosp/device-overlay/* "$AOSP_DIR/device/urbit/vere/"
+          ls -la "$AOSP_DIR/device/urbit/vere/"
+
+      - name: Build AOSP
+        run: |
+          AOSP_DIR="${AOSP_ROOT:-$HOME/aosp}"
+          cd "$AOSP_DIR"
+
+          source build/envsetup.sh
+          lunch ${{ env.PRODUCT }}-${{ inputs.build_variant }}
+
+          echo "Building with $(nproc) cores..."
+          m -j$(nproc)
+
+      - name: Package output
+        run: |
+          AOSP_DIR="${AOSP_ROOT:-$HOME/aosp}"
+          OUT_DIR="$AOSP_DIR/out/target/product/${{ env.DEVICE }}"
+
+          mkdir -p release
+
+          # Copy key files
+          for f in boot.img vendor_boot.img system.img vendor.img; do
+            if [ -f "$OUT_DIR/$f" ]; then
+              cp "$OUT_DIR/$f" release/
+            fi
+          done
+
+          # Create flashable zip
+          cd "$OUT_DIR"
+          zip -r "$GITHUB_WORKSPACE/release/vere-${{ env.DEVICE }}-images.zip" \
+            *.img android-info.txt 2>/dev/null || true
+
+          ls -la "$GITHUB_WORKSPACE/release/"
+
+      - name: Upload ROM images
+        uses: actions/upload-artifact@v4
+        with:
+          name: vere-${{ env.DEVICE }}-${{ inputs.build_variant }}
+          path: release/
+          if-no-files-found: warn
+          retention-days: 30
