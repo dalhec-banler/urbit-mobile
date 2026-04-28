@@ -5,7 +5,7 @@
 
 VERE_HOME=/data/vere
 PIER=$VERE_HOME/pier
-BINARY=/system/bin/urbit
+BINARY=/system_ext/bin/urbit
 LOG=$VERE_HOME/urbit.log
 PORT=34543
 

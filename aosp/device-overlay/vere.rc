@@ -1,4 +1,4 @@
-# /system/etc/init/vere.rc — Urbit vere init service
+# /system_ext/etc/init/vere.rc — Urbit vere init service
 #
 # Vere runs as a native daemon started by Android init.
 # It gets its own user (AID_VERE), SELinux domain, OOM protection,
@@ -9,7 +9,7 @@ on post-fs-data
     mkdir /data/vere 0700 vere vere
     restorecon_recursive /data/vere
 
-service vere /system/bin/vere-wrapper.sh
+service vere /system_ext/bin/vere-wrapper.sh
     class main
     user vere
     group vere inet net_raw
