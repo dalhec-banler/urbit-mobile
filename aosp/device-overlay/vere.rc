@@ -4,30 +4,21 @@
 # It gets its own user (AID_VERE), SELinux domain, OOM protection,
 # and foreground cpuset assignment.
 
+# Create data directory on boot
+on post-fs-data
+    mkdir /data/vere 0700 vere vere
+    restorecon_recursive /data/vere
+
 service vere /system/bin/vere-wrapper.sh
     class main
     user vere
     group vere inet net_raw
     seclabel u:r:vere:s0
-
-    # Don't start until boot is fully complete
     disabled
-
-    # OOM protection: -900 = very protected (only init/kernel are higher)
     oom_score_adjust -900
-
-    # Foreground cpuset — access to all cores including Cortex-X3 prime
     task_profiles MaxPerformance
-
-    # Allow time for loom checkpoint on shutdown (up to 300s watchdog)
     shutdown critical
 
-    # Network capabilities
-    capabilities NET_BIND_SERVICE NET_RAW
-
-    # Create data directory on first boot
-    mkdir /data/vere 0700 vere vere
-
-# Start vere after boot completes
+# Start vere after boot completes and network is up
 on property:sys.boot_completed=1
     start vere

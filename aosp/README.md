@@ -313,6 +313,27 @@ device-overlay/
 
 ### Build steps
 
+**Option A: Use the build script (recommended)**
+
+```bash
+# First, get the vere binary (download from CI or build locally)
+# Place at: aosp/device-overlay/prebuilt/arm64/urbit
+
+# Sync AOSP source (~100GB, ~2 hours on fast connection)
+./aosp/scripts/build-aosp.sh sync
+
+# Extract vendor blobs (requires device or factory image)
+./aosp/scripts/build-aosp.sh vendor
+
+# Build the ROM (~2-4 hours)
+./aosp/scripts/build-aosp.sh build
+
+# Flash to connected device
+./aosp/scripts/build-aosp.sh flash
+```
+
+**Option B: Manual steps**
+
 ```bash
 # 1. Sync AOSP source (pick tag with husky support)
 repo init -u https://android.googlesource.com/platform/manifest \
@@ -326,7 +347,7 @@ cp -r vendor-out/husky/<BUILD_ID>/vendor* .
 
 # 3. Copy vere overlay into source tree
 cp -r aosp/device-overlay device/urbit/vere
-cp /path/to/urbit-patched device/urbit/vere/prebuilt/arm64/vere
+cp /path/to/urbit-patched device/urbit/vere/prebuilt/arm64/urbit
 
 # 4. Build
 source build/envsetup.sh
@@ -336,6 +357,14 @@ m -j$(nproc)
 # 5. Flash
 adb reboot bootloader
 fastboot flashall -w
+```
+
+**Option C: CI workflow**
+
+For automated builds, use the `Build AOSP` workflow (requires self-hosted runner with 300GB+ disk):
+
+```bash
+gh workflow run aosp.yml -f android_version=android-15.0.0_r29 -f build_variant=userdebug
 ```
 
 ### SELinux policy highlights
