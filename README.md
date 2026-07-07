@@ -1,5 +1,14 @@
 # Urbit Mobile
 
+> **ARCHIVED.** This repo is the early prototype (Magisk deployment, Compose
+> launcher, lens-based `+code` retrieval). It is superseded by
+> `whisper-os-Urbit-Mobile`, which is the canonical product repo: init-managed
+> vere under a proper vendor overlay, Launcher3/Quickstep as HOME, and
+> Click/`conn.sock` as the only runtime truth path. Do not copy patterns from
+> here — in particular, the lens API (port 12321) used in
+> `launcher/.../UrbitConnection.kt` and `scripts/` is deprecated across Urbit
+> and must not appear in new code.
+
 Sovereign Urbit-native phone OS. Ship runs as user-space process on Android hardware, with the 64-bit loom as the primary filesystem.
 
 ## Status: Phase 2A Deployed
