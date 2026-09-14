@@ -13,6 +13,14 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+
+        // Ship endpoints. On the phone the ship is local (Eyre :80, loopback :12321).
+        // For emulator development pass -PshipUrl=http://10.0.2.2:8080 -PloopbackUrl=http://10.0.2.2:12322
+        // (10.0.2.2 is the host as seen from the emulator).
+        val shipUrl = (project.findProperty("shipUrl") as String?) ?: "http://127.0.0.1:80"
+        val loopbackUrl = (project.findProperty("loopbackUrl") as String?) ?: "http://127.0.0.1:12321"
+        buildConfigField("String", "SHIP_URL", "\"$shipUrl\"")
+        buildConfigField("String", "LOOPBACK_URL", "\"$loopbackUrl\"")
     }
 
     buildTypes {
@@ -32,6 +40,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {

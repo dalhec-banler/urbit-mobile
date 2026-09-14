@@ -160,7 +160,7 @@ fun SetupScreen(
         Spacer(Modifier.height(12.dp))
 
         Text(
-            text = "ship at localhost:80 · loopback :12321",
+            text = "ship at ${io.nativeplanet.urbit.launcher.BuildConfig.SHIP_URL.removePrefix("http://")} · loopback :${io.nativeplanet.urbit.launcher.BuildConfig.LOOPBACK_URL.substringAfterLast(":")}",
             style = typo.mono.copy(fontSize = 10.sp),
             color = tokens.ink3,
         )

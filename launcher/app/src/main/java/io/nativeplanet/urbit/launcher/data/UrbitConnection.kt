@@ -1,5 +1,7 @@
 package io.nativeplanet.urbit.launcher.data
 
+import io.nativeplanet.urbit.launcher.BuildConfig
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Cookie
@@ -15,8 +17,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 class UrbitConnection(
-    private val shipUrl: String = "http://127.0.0.1:80",
-    private val loopbackUrl: String = "http://127.0.0.1:12321"
+    private val shipUrl: String = BuildConfig.SHIP_URL,
+    private val loopbackUrl: String = BuildConfig.LOOPBACK_URL
 ) {
     private val eventId = AtomicLong(1)
     private var cookie: String? = null

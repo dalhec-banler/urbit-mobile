@@ -4,8 +4,8 @@
 
 # Built binaries
 *.elf
-urbit
-urbit-patched
+/urbit
+/urbit-patched
 
 # Pill files (176MB+, downloadable)
 *.pill
